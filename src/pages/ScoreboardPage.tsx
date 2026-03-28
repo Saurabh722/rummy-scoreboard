@@ -1,0 +1,266 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAppDispatch, useAppSelector } from '../hooks/useAppStore';
+import { undoLastRound, endGame } from '../features/games/gamesSlice';
+import { openRoundEntry } from '../features/ui/uiSlice';
+import { Button } from '../components/common/Button';
+import { RoundEntryModal } from '../components/game/RoundEntryModal';
+import { GAME_TYPE_LABELS } from '../constants/gameRules';
+import type { Game, Player } from '../types';
+
+function PlayerCard({
+  player,
+  rank,
+  isLeader,
+  game,
+}: {
+  player: Player;
+  rank: number;
+  isLeader: boolean;
+  game: Game;
+}) {
+  const elimLimit = game.type === 'pool' ? (game.poolLimit ?? 101)
+    : game.type === 'points' ? (game.pointsLimit ?? 250)
+    : null;
+  const progressPct = elimLimit ? Math.min(100, (player.totalScore / elimLimit) * 100) : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`card relative overflow-hidden transition-all ${
+        player.isEliminated
+          ? 'border-red-700/60 bg-red-950/30'
+          : isLeader
+          ? 'border-gold/60 animate-pulse-gold'
+          : ''
+      }`}
+    >
+      {/* Leader glow */}
+      {isLeader && !player.isEliminated && (
+        <div className="absolute inset-0 bg-gold/5 pointer-events-none rounded-2xl" />
+      )}
+
+      {/* Eliminated overlay banner */}
+      {player.isEliminated && (
+        <div className="absolute top-0 right-0 bg-red-700 text-white text-[10px] font-extrabold tracking-widest uppercase px-3 py-0.5 rounded-bl-xl rounded-tr-xl">
+          OUT
+        </div>
+      )}
+
+      {/* ── Header row ── */}
+      <div className="flex items-center gap-3">
+        {/* Rank / status icon */}
+        <div
+          className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+            player.isEliminated
+              ? 'bg-red-900/60 text-red-400'
+              : isLeader
+              ? 'bg-gold text-felt-darker'
+              : 'bg-card-surface text-white/70'
+          }`}
+        >
+          {player.isEliminated ? '✕' : isLeader ? '👑' : rank}
+        </div>
+
+        {/* Name + badge */}
+        <div className="flex-1 min-w-0">
+          <div
+            className={`font-bold text-base truncate ${
+              player.isEliminated
+                ? 'line-through text-white/30'
+                : isLeader
+                ? 'text-gold'
+                : 'text-white'
+            }`}
+          >
+            {player.name}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {player.isEliminated ? (
+              <span className="badge-eliminated">Eliminated</span>
+            ) : isLeader ? (
+              <span className="badge-winner">Leading</span>
+            ) : (
+              <span className="badge-active">Active</span>
+            )}
+          </div>
+        </div>
+
+        {/* Total score */}
+        <div className="text-right flex-shrink-0">
+          <div
+            className={`text-2xl font-bold ${
+              player.isEliminated ? 'text-red-400' : isLeader ? 'text-gold' : 'text-white'
+            }`}
+          >
+            {player.totalScore}
+          </div>
+          {elimLimit && (
+            <div className="text-xs text-white/40">/ {elimLimit}</div>
+          )}
+          {!elimLimit && <div className="text-xs text-white/40">pts</div>}
+        </div>
+      </div>
+
+      {/* ── Progress bar (Pool & Points) ── */}
+      {elimLimit && (
+        <div className="mt-3">
+          <div className="w-full bg-card-surface rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-1.5 rounded-full transition-all duration-500 ${
+                player.isEliminated
+                  ? 'bg-red-600'
+                  : progressPct >= 80
+                  ? 'bg-orange-400'
+                  : progressPct >= 60
+                  ? 'bg-yellow-400'
+                  : 'bg-emerald-500'
+              }`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Per-round scores (all rounds, scrollable) ── */}
+      {player.scores.length > 0 && (
+        <div className="mt-3 border-t border-card-border/60 pt-3">
+          <div
+            className="flex gap-2 overflow-x-auto pb-1"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {player.scores.map((s, i) => (
+              <div key={i} className="flex flex-col items-center flex-shrink-0 min-w-[36px]">
+                <span className="text-[10px] text-white/30 font-medium mb-0.5">R{i + 1}</span>
+                <span
+                  className={`text-xs px-2 py-1 rounded-lg font-bold ${
+                    s === 0
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : player.isEliminated && i === player.scores.length - 1
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-card-surface text-white/70'
+                  }`}
+                >
+                  {s === 0 ? '✓' : s}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+export function ScoreboardPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const game = useAppSelector((s) => s.games.games.find((g) => g.id === id));
+
+  if (!game) {
+    return (
+      <div className="text-center py-12 text-white/40">
+        <p className="text-2xl mb-2">🃏</p>
+        <p>Game not found</p>
+        <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">
+          Go Home
+        </Button>
+      </div>
+    );
+  }
+
+  if (game.status === 'finished') {
+    navigate(`/game/${id}/over`, { replace: true });
+    return null;
+  }
+
+  // Sort players: active first (by score ASC), eliminated last
+  const sortedPlayers = [...game.players].sort((a, b) => {
+    if (a.isEliminated !== b.isEliminated) return a.isEliminated ? 1 : -1;
+    return a.totalScore - b.totalScore;
+  });
+
+  const leaderId = sortedPlayers.find((p) => !p.isEliminated)?.id;
+
+  const handleUndo = () => {
+    if (game.rounds.length === 0) return;
+    if (window.confirm('Undo the last round? This cannot be redone.')) {
+      dispatch(undoLastRound(game.id));
+    }
+  };
+
+  const handleEndGame = () => {
+    if (window.confirm('End this game now?')) {
+      dispatch(endGame(game.id));
+      navigate(`/game/${id}/over`);
+    }
+  };
+
+  const activeCount = game.players.filter((p) => !p.isEliminated).length;
+  const gameLabel = GAME_TYPE_LABELS[game.type];
+
+  return (
+    <div className="space-y-4">
+      {/* Header info */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-white">{gameLabel}</h1>
+          <p className="text-sm text-white/50">
+            Round {game.currentRound - 1 > 0 ? game.currentRound - 1 : 0} played ·{' '}
+            {activeCount} active
+            {game.type === 'pool' && ` · Limit: ${game.poolLimit}`}
+            {game.type === 'points' && game.pointsLimit && ` · Limit: ${game.pointsLimit}`}
+            {game.type === 'deals' && ` · ${game.rounds.length}/${game.totalDeals} deals`}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/game/${id}/history`)}
+          className="text-white/60"
+        >
+          History
+        </Button>
+      </div>
+
+      {/* Player cards */}
+      <div className="space-y-3">
+        {sortedPlayers.map((player, idx) => (
+          <PlayerCard
+            key={player.id}
+            player={player}
+            rank={idx + 1}
+            isLeader={player.id === leaderId}
+            game={game}
+          />
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 pt-2">
+        {game.rounds.length > 0 && (
+          <Button variant="secondary" onClick={handleUndo} className="flex-1">
+            ↩ Undo
+          </Button>
+        )}
+        <Button
+          onClick={() => dispatch(openRoundEntry())}
+          className="flex-1"
+          disabled={activeCount < 2}
+        >
+          + Add Round
+        </Button>
+      </div>
+
+      <Button variant="danger" fullWidth onClick={handleEndGame} size="sm">
+        End Game
+      </Button>
+
+      {/* Round entry modal */}
+      <RoundEntryModal gameId={game.id} />
+    </div>
+  );
+}

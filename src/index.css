@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; margin: 0; padding: 0; }
+  body {
+    @apply bg-felt-darker text-white font-sans;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type='number'] { -moz-appearance: textfield; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gold text-felt-darker font-bold py-3 px-6 rounded-xl active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-card-surface text-white font-semibold py-3 px-6 rounded-xl border border-card-border active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply bg-red-700 text-white font-semibold py-3 px-6 rounded-xl active:scale-95 transition-all duration-150;
+  }
+  .card {
+    @apply bg-card-bg rounded-2xl border border-card-border p-4;
+  }
+  .input {
+    @apply bg-card-surface border border-card-border rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-gold transition-colors duration-150 w-full;
+  }
+  .badge {
+    @apply text-xs font-bold px-2 py-0.5 rounded-full;
+  }
+  .badge-active {
+    @apply badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+  .badge-eliminated {
+    @apply badge bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+  .badge-winner {
+    @apply badge bg-gold/20 text-gold border border-gold/30;
+  }
+}

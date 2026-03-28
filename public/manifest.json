@@ -1,0 +1,22 @@
+{
+  "name": "Rummy Scoreboard",
+  "short_name": "Rummy Score",
+  "description": "Track Rummy game scores for Points, Pool and Deals variants",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1f12",
+  "theme_color": "#1a472a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
