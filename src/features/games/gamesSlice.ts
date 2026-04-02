@@ -190,10 +190,35 @@ const gamesSlice = createSlice({
       game.players = recalculatePlayers(game);
       game.updatedAt = Date.now();
     },
+
+    rejoinPlayer(state, action: PayloadAction<{ gameId: string; playerId: string; startingPoints?: number }>) {
+      const { gameId, playerId, startingPoints } = action.payload;
+      const game = state.games.find((g) => g.id === gameId);
+      if (!game || game.status !== 'active') return;
+
+      const player = game.players.find((p) => p.id === playerId);
+      if (!player || !player.isEliminated) return;
+
+      // Desired display total after re-join (default: keep current total i.e. no change)
+      const desiredTotal = startingPoints !== undefined ? startingPoints : player.totalScore;
+
+      // Adjust startingPoints so recalculate yields desiredTotal:
+      //   totalScore = roundScores + p.startingPoints
+      //   roundScores = player.totalScore - (player.startingPoints ?? 0)
+      //   we need: roundScores + newStartingPoints = desiredTotal
+      //   newStartingPoints = desiredTotal - roundScores = desiredTotal - player.totalScore + (player.startingPoints ?? 0)
+      player.startingPoints = desiredTotal - player.totalScore + (player.startingPoints ?? 0);
+
+      // Elimination resets: effectiveScore = totalScore - rejoinBaseScore starts at 0
+      player.rejoinBaseScore = desiredTotal;
+      player.isEliminated = false;
+      game.players = recalculatePlayers(game);
+      game.updatedAt = Date.now();
+    },
   },
 });
 
-export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame, updateGameSettings, joinGame } =
+export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame, updateGameSettings, joinGame, rejoinPlayer } =
   gamesSlice.actions;
 
 export default gamesSlice.reducer;

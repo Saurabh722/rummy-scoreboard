@@ -13,11 +13,17 @@ export function recalculatePlayers(game: Game): Player[] {
 
     const totalScore = scores.reduce((sum, s) => sum + s, 0) + (player.startingPoints ?? 0);
 
+    // If player re-joined, elimination is based on points scored since re-join,
+    // not all-time total — so they aren't immediately re-eliminated after rejoining.
+    const effectiveScore = player.rejoinBaseScore !== undefined
+      ? totalScore - player.rejoinBaseScore
+      : totalScore;
+
     let isEliminated = false;
     if (game.type === 'pool' && game.poolLimit) {
-      isEliminated = totalScore >= game.poolLimit;
+      isEliminated = effectiveScore >= game.poolLimit;
     } else if (game.type === 'points' && game.pointsLimit) {
-      isEliminated = totalScore >= game.pointsLimit;
+      isEliminated = effectiveScore >= game.pointsLimit;
     }
 
     return { ...player, scores, totalScore, isEliminated };

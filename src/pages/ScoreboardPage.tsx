@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppStore';
-import { undoLastRound, endGame, updateGameSettings, joinGame } from '../features/games/gamesSlice';
+import { undoLastRound, endGame, updateGameSettings, joinGame, rejoinPlayer } from '../features/games/gamesSlice';
 import { openRoundEntry } from '../features/ui/uiSlice';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
@@ -21,11 +21,13 @@ function PlayerCard({
   rank,
   isLeader,
   game,
+  onRejoin,
 }: {
   player: Player;
   rank: number;
   isLeader: boolean;
   game: Game;
+  onRejoin: (player: Player) => void;
 }) {
   const elimLimit = game.type === 'pool' ? (game.poolLimit ?? 101)
     : game.type === 'points' ? (game.pointsLimit ?? 250)
@@ -95,6 +97,11 @@ function PlayerCard({
             {player.joinedAtRound && player.joinedAtRound > 1 && !player.isEliminated && (
               <span className="text-[10px] bg-blue-900/40 border border-blue-700/40 text-blue-300 px-1.5 py-0.5 rounded-full font-semibold">
                 Joined R{player.joinedAtRound}
+              </span>
+            )}
+            {player.rejoinBaseScore !== undefined && !player.isEliminated && (
+              <span className="text-[10px] bg-emerald-900/40 border border-emerald-700/40 text-emerald-300 px-1.5 py-0.5 rounded-full font-semibold">
+                ↩ Re-Joined
               </span>
             )}
           </div>
@@ -167,31 +174,64 @@ function PlayerCard({
           </div>
         </div>
       )}
+      {/* ── Re-Join button for eliminated players ── */}
+      {player.isEliminated && (
+        <div className="mt-3 pt-3 border-t border-red-700/30">
+          <button
+            onClick={() => onRejoin(player)}
+            className="w-full py-1.5 text-xs font-semibold text-red-300 hover:text-white border border-red-700/40 hover:border-red-400/70 hover:bg-red-900/30 rounded-xl transition-all"
+          >
+            ↩ Re-Join Game
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }
-
-// ─── Join Game Modal ──────────────────────────────────────────────────────────
 function JoinGameModal({
   game,
   isOpen,
   onClose,
+  rejoinPlayer: rejoinTarget,
+  onConfirmRejoin,
 }: {
   game: Game;
   isOpen: boolean;
   onClose: () => void;
+  rejoinPlayer?: { id: string; name: string; totalScore: number };
+  onConfirmRejoin?: (startingPoints: number) => void;
 }) {
   const dispatch = useAppDispatch();
   const profiles = useAppSelector((s) => s.profiles.profiles);
+  const isRejoin = !!rejoinTarget;
   const [name, setName] = useState('');
-  const [points, setPoints] = useState(0);
+  const [points, setPoints] = useState(isRejoin ? (rejoinTarget?.totalScore ?? 0) : 0);
 
-  const existingNames = game.players.map((p) => p.name.toLowerCase());
+  // Re-seed when modal opens or rejoin target changes
+  useEffect(() => {
+    if (isOpen) {
+      if (isRejoin && rejoinTarget) {
+        setPoints(rejoinTarget.totalScore);
+      } else {
+        setName('');
+        setPoints(0);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, rejoinTarget?.id]);
+
+  const existingNames = game.players
+    .filter((p) => !isRejoin || p.id !== rejoinTarget?.id)
+    .map((p) => p.name.toLowerCase());
   const availableProfiles = profiles.filter(
     (p) => !existingNames.includes(p.name.toLowerCase()),
   );
 
   const handleJoin = () => {
+    if (isRejoin && onConfirmRejoin) {
+      onConfirmRejoin(points);
+      return;
+    }
     const trimmed = name.trim();
     if (!trimmed) return;
     dispatch(joinGame({ gameId: game.id, playerName: trimmed, startingPoints: points }));
@@ -200,32 +240,47 @@ function JoinGameModal({
     onClose();
   };
 
+  const effectiveName = isRejoin ? rejoinTarget!.name : name;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Player">
+    <Modal isOpen={isOpen} onClose={onClose} title={isRejoin ? 'Re-Join Game' : 'Add Player'}>
       <div className="space-y-5">
         <p className="text-sm text-white/40">
-          Player will join from the next round. Set starting points to match their handicap (default 0).
+          {isRejoin
+            ? `${rejoinTarget!.name} will re-join from the next round. Adjust their starting points below.`
+            : 'Player will join from the next round. Set starting points to match their handicap (default 0).'}
         </p>
 
-        {/* Name input */}
+        {/* Name — read-only for rejoin, editable for new join */}
         <div>
           <label className="text-sm text-white/60 mb-1.5 block">Player Name</label>
-          <input
-            className="input w-full"
-            placeholder="Enter name"
-            value={name}
-            maxLength={20}
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
-          />
-          {existingNames.includes(name.trim().toLowerCase()) && name.trim() && (
-            <p className="text-xs text-red-400 mt-1">This player is already in the game.</p>
+          {isRejoin ? (
+            <div className="input w-full text-white/70 bg-card-surface cursor-not-allowed flex items-center gap-2">
+              <span>{effectiveName}</span>
+              <span className="ml-auto text-[10px] bg-emerald-900/40 border border-emerald-700/40 text-emerald-300 px-1.5 py-0.5 rounded-full font-semibold">
+                ↩ Re-Joining
+              </span>
+            </div>
+          ) : (
+            <>
+              <input
+                className="input w-full"
+                placeholder="Enter name"
+                value={name}
+                maxLength={20}
+                autoFocus
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+              />
+              {existingNames.includes(name.trim().toLowerCase()) && name.trim() && (
+                <p className="text-xs text-red-400 mt-1">This player is already in the game.</p>
+              )}
+            </>
           )}
         </div>
 
-        {/* Saved profiles quick-pick */}
-        {availableProfiles.length > 0 && (
+        {/* Saved profiles quick-pick — only for new joins */}
+        {!isRejoin && availableProfiles.length > 0 && (
           <div>
             <div className="text-xs text-white/50 mb-2 font-semibold uppercase tracking-wide">
               Saved Players
@@ -295,9 +350,9 @@ function JoinGameModal({
           <Button
             onClick={handleJoin}
             className="flex-1"
-            disabled={!name.trim() || existingNames.includes(name.trim().toLowerCase())}
+            disabled={!isRejoin && (!name.trim() || existingNames.includes(name.trim().toLowerCase()))}
           >
-            Add to Game
+            {isRejoin ? '↩ Confirm Re-Join' : 'Add to Game'}
           </Button>
         </div>
       </div>
@@ -409,6 +464,7 @@ export function ScoreboardPage() {
   const dispatch = useAppDispatch();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [rejoinTarget, setRejoinTarget] = useState<{ id: string; name: string; totalScore: number } | null>(null);
 
   const game = useAppSelector((s) => s.games.games.find((g) => g.id === id));
 
@@ -509,6 +565,7 @@ export function ScoreboardPage() {
             rank={idx + 1}
             isLeader={player.id === leaderId}
             game={game}
+            onRejoin={(p) => setRejoinTarget({ id: p.id, name: p.name, totalScore: p.totalScore })}
           />
         ))}
       </div>
@@ -542,6 +599,20 @@ export function ScoreboardPage() {
         isOpen={joinOpen}
         onClose={() => setJoinOpen(false)}
       />
+
+      {/* Re-join modal */}
+      {rejoinTarget && (
+        <JoinGameModal
+          game={game}
+          isOpen={!!rejoinTarget}
+          onClose={() => setRejoinTarget(null)}
+          rejoinPlayer={rejoinTarget}
+          onConfirmRejoin={(startingPoints) => {
+            dispatch(rejoinPlayer({ gameId: game.id, playerId: rejoinTarget.id, startingPoints }));
+            setRejoinTarget(null);
+          }}
+        />
+      )}
 
       {/* Points table settings modal */}
       {game.type === 'points' && (
