@@ -524,35 +524,39 @@ export function ScoreboardPage() {
             {game.type === 'deals' && ` · ${game.rounds.length}/${game.totalDeals} deals`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {game.type === 'points' && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setSettingsOpen(true)}
-              className="text-white/60"
+              title="Points Table Settings"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-white/50 hover:text-gold hover:bg-card-surface transition-all"
             >
-              ⚙ Table
-            </Button>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2"/>
+              </svg>
+            </button>
           )}
           {game.players.length < MAX_PLAYERS && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setJoinOpen(true)}
-              className="text-white/60"
+              title="Add Player"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-white/50 hover:text-gold hover:bg-card-surface transition-all"
             >
-              + Player
-            </Button>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+            </button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => navigate(`/game/${id}/history`)}
-            className="text-white/60"
+            title="Round History"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-white/50 hover:text-gold hover:bg-card-surface transition-all"
           >
-            History
-          </Button>
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/>
+            </svg>
+          </button>
         </div>
       </div>
 
