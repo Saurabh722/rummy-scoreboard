@@ -253,17 +253,27 @@ function JoinGameModal({
           <label className="text-sm text-white/60 mb-1.5 block">
             Starting Points <span className="text-white/30">(carry-in handicap)</span>
           </label>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setPoints((v) => Math.max(0, v - 5))}
-              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center flex-shrink-0"
             >
               −
             </button>
-            <span className="text-2xl font-bold text-gold w-16 text-center">{points}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={points}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setPoints(isNaN(val) || val < 0 ? 0 : val);
+              }}
+              className="input text-center text-xl font-bold text-gold w-24 flex-shrink-0"
+            />
             <button
               onClick={() => setPoints((v) => v + 5)}
-              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center flex-shrink-0"
             >
               +
             </button>
