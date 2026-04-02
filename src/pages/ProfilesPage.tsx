@@ -150,7 +150,7 @@ function PlayersTab() {
 function GroupsTab() {
   const dispatch = useAppDispatch();
   const profiles = useAppSelector((s) => s.profiles.profiles);
-  const groups = useAppSelector((s) => s.profiles.groups);
+  const groups = useAppSelector((s) => s.profiles.groups ?? []);
 
   const [newGroupName, setNewGroupName] = useState('');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);

@@ -11,7 +11,13 @@ function loadState() {
   try {
     const serialized = localStorage.getItem(STORAGE_KEY);
     if (!serialized) return undefined;
-    return JSON.parse(serialized) as { games?: unknown; profiles?: unknown };
+    const parsed = JSON.parse(serialized) as { games?: unknown; profiles?: unknown };
+    // Migration: ensure groups array exists for older persisted states
+    if (parsed.profiles && typeof parsed.profiles === 'object') {
+      const p = parsed.profiles as Record<string, unknown>;
+      if (!Array.isArray(p.groups)) p.groups = [];
+    }
+    return parsed;
   } catch {
     return undefined;
   }

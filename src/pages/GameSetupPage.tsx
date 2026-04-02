@@ -206,7 +206,7 @@ function StepPlayers({
 }) {
   const dispatch = useAppDispatch();
   const profiles = useAppSelector((s) => s.profiles.profiles);
-  const groups = useAppSelector((s) => s.profiles.groups);
+  const groups = useAppSelector((s) => s.profiles.groups ?? []);
   const [inputValue, setInputValue] = useState('');
 
   const isAdded = (name: string) =>
