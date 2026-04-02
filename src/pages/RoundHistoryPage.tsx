@@ -24,7 +24,12 @@ export function RoundHistoryPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-white">Round History</h1>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/game/${id}`)}>
+          ← Back
+        </Button>
+        <h1 className="text-xl font-bold text-white">Round History</h1>
+      </div>
 
       {game.rounds.length === 0 && (
         <div className="text-center py-12 text-white/30">
