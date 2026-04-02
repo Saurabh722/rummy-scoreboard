@@ -372,16 +372,14 @@ export function GameSetupPage() {
   const dispatch = useAppDispatch();
 
   const [step, setStep] = useState(0);
-  // gameType fixed to 'points' while game type step is hidden
-  const [gameType] = useState<GameType>('points');
-  // poolLimit and totalDeals unused until game type step is restored
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [poolLimit, setPoolLimit] = useState<PoolLimit>(101);
-  const [pointsLimit, setPointsLimit] = useState(POINTS_DEFAULT_LIMIT);
-  const [firstDrop, setFirstDrop] = useState(FIRST_DROP_DEFAULT);
-  const [maxPoints, setMaxPoints] = useState(MAX_POINTS_DEFAULT);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [totalDeals, setTotalDeals] = useState(3);
+  // ── Fixed while game-type step is hidden. Restore setX when re-enabling. ───
+  const gameType: GameType = 'points';
+  const poolLimit: PoolLimit = 101;
+  const [pointsLimit] = useState(POINTS_DEFAULT_LIMIT);
+  const [firstDrop] = useState(FIRST_DROP_DEFAULT);
+  const [maxPoints] = useState(MAX_POINTS_DEFAULT);
+  const totalDeals = 3;
+  // ────────────────────────────────────────────────────────────────────────────
   const [players, setPlayers] = useState<string[]>([]);
 
   const canProceed = () => {
