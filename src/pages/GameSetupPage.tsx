@@ -26,7 +26,9 @@ import {
   GAME_TYPE_DESCRIPTIONS,
 } from '../constants/gameRules';
 
-const STEPS = ['Game Type', 'Players', 'Review'];
+// Game type step is hidden for now — Points Rummy is the default.
+// To re-enable, restore 'Game Type' as the first entry in STEPS.
+const STEPS = ['Players', 'Review'];
 
 // ─── Step 1: Game Type ──────────────────────────────────────────────────────
 function StepGameType({
@@ -377,9 +379,8 @@ export function GameSetupPage() {
   const [players, setPlayers] = useState<string[]>([]);
 
   const canProceed = () => {
-    if (step === 0) return true;
-    if (step === 1) return players.length >= MIN_PLAYERS;
-    return true;
+    if (step === 0) return players.length >= MIN_PLAYERS; // Players step
+    return true; // Review step
   };
 
   const handleNext = () => {
@@ -415,24 +416,8 @@ export function GameSetupPage() {
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.2 }}
         >
-          {step === 0 && (
-            <StepGameType
-              gameType={gameType}
-              setGameType={setGameType}
-              poolLimit={poolLimit}
-              setPoolLimit={setPoolLimit}
-              pointsLimit={pointsLimit}
-              setPointsLimit={setPointsLimit}
-              firstDrop={firstDrop}
-              setFirstDrop={setFirstDrop}
-              maxPoints={maxPoints}
-              setMaxPoints={setMaxPoints}
-              totalDeals={totalDeals}
-              setTotalDeals={setTotalDeals}
-            />
-          )}
-          {step === 1 && <StepPlayers players={players} setPlayers={setPlayers} />}
-          {step === 2 && (
+          {step === 0 && <StepPlayers players={players} setPlayers={setPlayers} />}
+          {step === 1 && (
             <StepReview
               gameType={gameType}
               players={players}

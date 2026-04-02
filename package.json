@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:mfe": "npm run deploy && echo '\\n📦 Remote entry URL:\\nhttps://rummy-scoreboard-app.web.app/assets/remoteEntry.js'",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@originjs/vite-plugin-federation": "^1.4.1",
     "@reduxjs/toolkit": "^2.11.2",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",

@@ -1,5 +1,5 @@
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 6;
+export const MAX_PLAYERS = 10;
 export const POOL_LIMITS = [101, 201] as const;
 export const POINTS_DEFAULT_LIMIT = 250; // default elimination threshold for Points Rummy
 export const POINTS_LIMIT_MIN = 100;

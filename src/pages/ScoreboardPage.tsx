@@ -1,11 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppStore';
-import { undoLastRound, endGame } from '../features/games/gamesSlice';
+import { undoLastRound, endGame, updateGameSettings } from '../features/games/gamesSlice';
 import { openRoundEntry } from '../features/ui/uiSlice';
 import { Button } from '../components/common/Button';
+import { Modal } from '../components/common/Modal';
 import { RoundEntryModal } from '../components/game/RoundEntryModal';
-import { GAME_TYPE_LABELS } from '../constants/gameRules';
+import {
+  GAME_TYPE_LABELS,
+  POINTS_LIMIT_MIN, POINTS_LIMIT_MAX,
+  FIRST_DROP_MIN, FIRST_DROP_MAX,
+  MAX_POINTS_MIN, MAX_POINTS_MAX,
+} from '../constants/gameRules';
 import type { Game, Player } from '../types';
 
 function PlayerCard({
@@ -153,10 +160,109 @@ function PlayerCard({
   );
 }
 
+// ─── Points Table Settings Modal ─────────────────────────────────────────────
+function SettingsModal({
+  game,
+  isOpen,
+  onClose,
+}: {
+  game: Game;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const dispatch = useAppDispatch();
+  const [pointsLimit, setPointsLimit] = useState(game.pointsLimit ?? 250);
+  const [firstDrop, setFirstDrop] = useState(game.firstDrop ?? 25);
+  const [maxPoints, setMaxPoints] = useState(game.maxPoints ?? 80);
+
+  const handleSave = () => {
+    dispatch(updateGameSettings({ gameId: game.id, pointsLimit, firstDrop, maxPoints }));
+    onClose();
+  };
+
+  const Row = ({
+    label,
+    value,
+    onDec,
+    onInc,
+    color = 'text-white',
+  }: {
+    label: string;
+    value: number;
+    onDec: () => void;
+    onInc: () => void;
+    color?: string;
+  }) => (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-white/60 text-sm flex-1">{label}</span>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onDec}
+          className="w-9 h-9 rounded-xl bg-card-bg border border-card-border text-white font-bold text-lg flex items-center justify-center"
+        >
+          −
+        </button>
+        <span className={`w-12 text-center text-lg font-bold ${color}`}>{value}</span>
+        <button
+          onClick={onInc}
+          className="w-9 h-9 rounded-xl bg-card-bg border border-card-border text-white font-bold text-lg flex items-center justify-center"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Points Table">
+      <div className="space-y-5">
+        <p className="text-sm text-white/40">
+          Changes apply from the next round onwards.
+        </p>
+
+        <div className="card space-y-4">
+          <Row
+            label="Elimination Limit"
+            value={pointsLimit}
+            color="text-gold"
+            onDec={() => setPointsLimit((v) => Math.max(POINTS_LIMIT_MIN, v - 25))}
+            onInc={() => setPointsLimit((v) => Math.min(POINTS_LIMIT_MAX, v + 25))}
+          />
+          <div className="border-t border-card-border" />
+          <Row
+            label="First Drop"
+            value={firstDrop}
+            color="text-amber-300"
+            onDec={() => setFirstDrop((v) => Math.max(FIRST_DROP_MIN, v - 5))}
+            onInc={() => setFirstDrop((v) => Math.min(FIRST_DROP_MAX, v + 5))}
+          />
+          <div className="border-t border-card-border" />
+          <Row
+            label="Max Points"
+            value={maxPoints}
+            onDec={() => setMaxPoints((v) => Math.max(MAX_POINTS_MIN, v - 5))}
+            onInc={() => setMaxPoints((v) => Math.min(MAX_POINTS_MAX, v + 5))}
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} className="flex-1">
+            Save
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ScoreboardPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const game = useAppSelector((s) => s.games.games.find((g) => g.id === id));
 
@@ -216,14 +322,26 @@ export function ScoreboardPage() {
             {game.type === 'deals' && ` · ${game.rounds.length}/${game.totalDeals} deals`}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/game/${id}/history`)}
-          className="text-white/60"
-        >
-          History
-        </Button>
+        <div className="flex items-center gap-2">
+          {game.type === 'points' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              className="text-white/60"
+            >
+              ⚙ Table
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/game/${id}/history`)}
+            className="text-white/60"
+          >
+            History
+          </Button>
+        </div>
       </div>
 
       {/* Player cards */}
@@ -261,6 +379,15 @@ export function ScoreboardPage() {
 
       {/* Round entry modal */}
       <RoundEntryModal gameId={game.id} />
+
+      {/* Points table settings modal */}
+      {game.type === 'points' && (
+        <SettingsModal
+          game={game}
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

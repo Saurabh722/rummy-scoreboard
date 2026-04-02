@@ -144,10 +144,28 @@ const gamesSlice = createSlice({
     deleteGame(state, action: PayloadAction<string>) {
       state.games = state.games.filter((g) => g.id !== action.payload);
     },
+
+    updateGameSettings(
+      state,
+      action: PayloadAction<{
+        gameId: string;
+        pointsLimit?: number;
+        firstDrop?: number;
+        maxPoints?: number;
+      }>,
+    ) {
+      const { gameId, pointsLimit, firstDrop, maxPoints } = action.payload;
+      const game = state.games.find((g) => g.id === gameId);
+      if (!game) return;
+      if (pointsLimit !== undefined) game.pointsLimit = pointsLimit;
+      if (firstDrop !== undefined) game.firstDrop = firstDrop;
+      if (maxPoints !== undefined) game.maxPoints = maxPoints;
+      game.updatedAt = Date.now();
+    },
   },
 });
 
-export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame } =
+export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame, updateGameSettings } =
   gamesSlice.actions;
 
 export default gamesSlice.reducer;
