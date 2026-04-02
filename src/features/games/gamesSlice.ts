@@ -162,10 +162,38 @@ const gamesSlice = createSlice({
       if (maxPoints !== undefined) game.maxPoints = maxPoints;
       game.updatedAt = Date.now();
     },
+
+    joinGame(
+      state,
+      action: PayloadAction<{ gameId: string; playerName: string; startingPoints: number }>,
+    ) {
+      const { gameId, playerName, startingPoints } = action.payload;
+      const game = state.games.find((g) => g.id === gameId);
+      if (!game || game.status !== 'active') return;
+
+      const trimmed = playerName.trim();
+      if (!trimmed) return;
+      if (game.players.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) return;
+
+      const newPlayer: Player = {
+        id: uuidv4(),
+        name: trimmed,
+        totalScore: startingPoints,
+        isEliminated: false,
+        scores: [],
+        startingPoints: startingPoints > 0 ? startingPoints : undefined,
+        joinedAtRound: game.currentRound,
+      };
+
+      game.players.push(newPlayer);
+      // Recalculate so scores[] array length matches rounds[]
+      game.players = recalculatePlayers(game);
+      game.updatedAt = Date.now();
+    },
   },
 });
 
-export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame, updateGameSettings } =
+export const { createGame, addRound, editRound, undoLastRound, endGame, deleteGame, updateGameSettings, joinGame } =
   gamesSlice.actions;
 
 export default gamesSlice.reducer;

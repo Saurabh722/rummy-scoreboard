@@ -11,7 +11,7 @@ export function recalculatePlayers(game: Game): Player[] {
       return rs ? rs.score : 0;
     });
 
-    const totalScore = scores.reduce((sum, s) => sum + s, 0);
+    const totalScore = scores.reduce((sum, s) => sum + s, 0) + (player.startingPoints ?? 0);
 
     let isEliminated = false;
     if (game.type === 'pool' && game.poolLimit) {

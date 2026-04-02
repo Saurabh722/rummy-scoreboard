@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppStore';
-import { undoLastRound, endGame, updateGameSettings } from '../features/games/gamesSlice';
+import { undoLastRound, endGame, updateGameSettings, joinGame } from '../features/games/gamesSlice';
 import { openRoundEntry } from '../features/ui/uiSlice';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
@@ -12,6 +12,7 @@ import {
   POINTS_LIMIT_MIN, POINTS_LIMIT_MAX,
   FIRST_DROP_MIN, FIRST_DROP_MAX,
   MAX_POINTS_MIN, MAX_POINTS_MAX,
+  MAX_PLAYERS,
 } from '../constants/gameRules';
 import type { Game, Player } from '../types';
 
@@ -91,6 +92,11 @@ function PlayerCard({
             ) : (
               <span className="badge-active">Active</span>
             )}
+            {player.joinedAtRound && player.joinedAtRound > 1 && !player.isEliminated && (
+              <span className="text-[10px] bg-blue-900/40 border border-blue-700/40 text-blue-300 px-1.5 py-0.5 rounded-full font-semibold">
+                Joined R{player.joinedAtRound}
+              </span>
+            )}
           </div>
         </div>
 
@@ -107,6 +113,11 @@ function PlayerCard({
             <div className="text-xs text-white/40">/ {elimLimit}</div>
           )}
           {!elimLimit && <div className="text-xs text-white/40">pts</div>}
+          {player.startingPoints !== undefined && player.startingPoints > 0 && (
+            <div className="text-[10px] text-blue-400/60 mt-0.5">
+              +{player.startingPoints} carry
+            </div>
+          )}
         </div>
       </div>
 
@@ -157,6 +168,130 @@ function PlayerCard({
         </div>
       )}
     </motion.div>
+  );
+}
+
+// ─── Join Game Modal ──────────────────────────────────────────────────────────
+function JoinGameModal({
+  game,
+  isOpen,
+  onClose,
+}: {
+  game: Game;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const dispatch = useAppDispatch();
+  const profiles = useAppSelector((s) => s.profiles.profiles);
+  const [name, setName] = useState('');
+  const [points, setPoints] = useState(0);
+
+  const existingNames = game.players.map((p) => p.name.toLowerCase());
+  const availableProfiles = profiles.filter(
+    (p) => !existingNames.includes(p.name.toLowerCase()),
+  );
+
+  const handleJoin = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    dispatch(joinGame({ gameId: game.id, playerName: trimmed, startingPoints: points }));
+    setName('');
+    setPoints(0);
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Add Player">
+      <div className="space-y-5">
+        <p className="text-sm text-white/40">
+          Player will join from the next round. Set starting points to match their handicap (default 0).
+        </p>
+
+        {/* Name input */}
+        <div>
+          <label className="text-sm text-white/60 mb-1.5 block">Player Name</label>
+          <input
+            className="input w-full"
+            placeholder="Enter name"
+            value={name}
+            maxLength={20}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+          />
+          {existingNames.includes(name.trim().toLowerCase()) && name.trim() && (
+            <p className="text-xs text-red-400 mt-1">This player is already in the game.</p>
+          )}
+        </div>
+
+        {/* Saved profiles quick-pick */}
+        {availableProfiles.length > 0 && (
+          <div>
+            <div className="text-xs text-white/50 mb-2 font-semibold uppercase tracking-wide">
+              Saved Players
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableProfiles.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setName(p.name)}
+                  className={`text-sm px-3 py-1.5 rounded-full border transition-all ${
+                    name === p.name
+                      ? 'bg-gold text-felt-darker border-gold'
+                      : 'bg-card-bg border-card-border text-white/70 hover:border-gold/50 hover:text-gold'
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Starting points stepper */}
+        <div>
+          <label className="text-sm text-white/60 mb-1.5 block">
+            Starting Points <span className="text-white/30">(carry-in handicap)</span>
+          </label>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setPoints((v) => Math.max(0, v - 5))}
+              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center"
+            >
+              −
+            </button>
+            <span className="text-2xl font-bold text-gold w-16 text-center">{points}</span>
+            <button
+              onClick={() => setPoints((v) => v + 5)}
+              className="w-10 h-10 rounded-xl bg-card-bg border border-card-border text-white font-bold text-xl flex items-center justify-center"
+            >
+              +
+            </button>
+            {points > 0 && (
+              <button
+                onClick={() => setPoints(0)}
+                className="text-xs text-white/40 hover:text-white/70 underline"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleJoin}
+            className="flex-1"
+            disabled={!name.trim() || existingNames.includes(name.trim().toLowerCase())}
+          >
+            Add to Game
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -263,6 +398,7 @@ export function ScoreboardPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
 
   const game = useAppSelector((s) => s.games.games.find((g) => g.id === id));
 
@@ -333,6 +469,16 @@ export function ScoreboardPage() {
               ⚙ Table
             </Button>
           )}
+          {game.players.length < MAX_PLAYERS && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setJoinOpen(true)}
+              className="text-white/60"
+            >
+              + Player
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -379,6 +525,13 @@ export function ScoreboardPage() {
 
       {/* Round entry modal */}
       <RoundEntryModal gameId={game.id} />
+
+      {/* Join game modal */}
+      <JoinGameModal
+        game={game}
+        isOpen={joinOpen}
+        onClose={() => setJoinOpen(false)}
+      />
 
       {/* Points table settings modal */}
       {game.type === 'points' && (

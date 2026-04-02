@@ -21,6 +21,8 @@ export interface Player {
   totalScore: number;
   isEliminated: boolean;
   scores: number[]; // per-round score array (parallel to game.rounds)
+  startingPoints?: number; // carry-in points for mid-game joiners
+  joinedAtRound?: number;  // round number when player joined (1 = start)
 }
 
 export interface Game {
