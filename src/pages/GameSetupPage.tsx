@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppStore';
 import { createGame } from '../features/games/gamesSlice';
+import { addProfile } from '../features/profiles/profilesSlice';
 import { Button } from '../components/common/Button';
 import { Stepper } from '../components/common/Stepper';
 import type { GameType, PoolLimit } from '../types';
@@ -203,13 +204,26 @@ function StepPlayers({
   players: string[];
   setPlayers: (p: string[]) => void;
 }) {
+  const dispatch = useAppDispatch();
   const profiles = useAppSelector((s) => s.profiles.profiles);
+  const groups = useAppSelector((s) => s.profiles.groups);
   const [inputValue, setInputValue] = useState('');
+
+  const isAdded = (name: string) =>
+    players.some((p) => p.toLowerCase() === name.toLowerCase());
+
+  // Auto-save a new profile if the name doesn't already exist
+  const ensureProfile = (name: string) => {
+    if (!profiles.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      dispatch(addProfile(name));
+    }
+  };
 
   const addPlayer = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed || players.length >= MAX_PLAYERS) return;
-    if (players.some((p) => p.toLowerCase() === trimmed.toLowerCase())) return;
+    if (isAdded(trimmed)) return;
+    ensureProfile(trimmed);
     setPlayers([...players, trimmed]);
     setInputValue('');
   };
@@ -218,22 +232,35 @@ function StepPlayers({
     setPlayers(players.filter((_, i) => i !== idx));
   };
 
-  const unusedProfiles = profiles.filter(
-    (p) => !players.some((name) => name.toLowerCase() === p.name.toLowerCase()),
-  );
+  // Add all members of a group, skipping already-added players
+  const addGroup = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const newNames: string[] = [];
+    for (const profileId of group.memberIds) {
+      const profile = profiles.find((p) => p.id === profileId);
+      if (!profile) continue;
+      if (isAdded(profile.name)) continue;
+      if (players.length + newNames.length >= MAX_PLAYERS) break;
+      newNames.push(profile.name);
+    }
+    if (newNames.length > 0) setPlayers([...players, ...newNames]);
+  };
+
+  const unusedProfiles = profiles.filter((p) => !isAdded(p.name));
 
   return (
     <div className="space-y-5">
       <h2 className="text-xl font-bold text-white">Add Players</h2>
       <p className="text-sm text-white/50">
-        {players.length}/{MAX_PLAYERS} players added · Minimum {MIN_PLAYERS}
+        {players.length}/{MAX_PLAYERS} players · Minimum {MIN_PLAYERS}
       </p>
 
       {/* Manual add */}
       <div className="flex gap-2">
         <input
           className="input flex-1"
-          placeholder="Enter player name"
+          placeholder="Type player name"
           value={inputValue}
           maxLength={20}
           onChange={(e) => setInputValue(e.target.value)}
@@ -248,35 +275,40 @@ function StepPlayers({
         </Button>
       </div>
 
-      {/* Player chips */}
+      {/* Added players list */}
       {players.length > 0 && (
         <div className="space-y-2">
-          {players.map((name, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 bg-card-surface rounded-xl px-4 py-3 border border-card-border"
-            >
-              <span className="w-7 h-7 rounded-full bg-gold/20 text-gold text-sm font-bold flex items-center justify-center">
-                {idx + 1}
-              </span>
-              <span className="flex-1 font-medium text-white">{name}</span>
-              <button
-                onClick={() => removePlayer(idx)}
-                className="text-white/30 hover:text-red-400 transition-colors"
+          <AnimatePresence>
+            {players.map((name, idx) => (
+              <motion.div
+                key={name}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="flex items-center gap-3 bg-card-surface rounded-xl px-4 py-3 border border-card-border"
               >
-                ×
-              </button>
-            </motion.div>
-          ))}
+                <span className="w-7 h-7 rounded-full bg-gold/20 text-gold text-sm font-bold flex items-center justify-center">
+                  {idx + 1}
+                </span>
+                <span className="flex-1 font-medium text-white">{name}</span>
+                <button
+                  onClick={() => removePlayer(idx)}
+                  className="text-white/30 hover:text-red-400 transition-colors text-lg leading-none"
+                >
+                  ×
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
-      {/* Saved profiles */}
+      {/* Add from saved profiles */}
       {unusedProfiles.length > 0 && players.length < MAX_PLAYERS && (
         <div>
-          <div className="text-sm text-white/50 mb-2">Quick add from profiles:</div>
+          <div className="text-xs text-white/50 mb-2 font-semibold uppercase tracking-wide">
+            Saved Players
+          </div>
           <div className="flex flex-wrap gap-2">
             {unusedProfiles.map((p) => (
               <button
@@ -287,6 +319,37 @@ function StepPlayers({
                 + {p.name}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add by group */}
+      {groups.length > 0 && players.length < MAX_PLAYERS && (
+        <div>
+          <div className="text-xs text-white/50 mb-2 font-semibold uppercase tracking-wide">
+            Add by Group
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groups.map((g) => {
+              const memberNames = g.memberIds
+                .map((id) => profiles.find((p) => p.id === id)?.name)
+                .filter(Boolean) as string[];
+              const unadded = memberNames.filter((name) => !isAdded(name));
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => addGroup(g.id)}
+                  disabled={unadded.length === 0 || players.length >= MAX_PLAYERS}
+                  className="bg-blue-900/30 border border-blue-700/40 text-blue-200 text-sm px-3 py-1.5 rounded-full hover:border-blue-400/60 hover:text-blue-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={unadded.length === 0 ? 'All members already added' : `Add: ${unadded.join(', ')}`}
+                >
+                  👥 {g.name}
+                  <span className="ml-1 text-blue-400/70 text-xs">
+                    ({unadded.length > 0 ? `+${unadded.length}` : '✓'})
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

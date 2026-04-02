@@ -48,6 +48,13 @@ export interface PlayerProfile {
   createdAt: number;
 }
 
+export interface PlayerGroup {
+  id: string;
+  name: string;
+  memberIds: string[]; // profile IDs
+  createdAt: number;
+}
+
 // For score entry form
 export interface RoundScoreEntry {
   playerId: string;

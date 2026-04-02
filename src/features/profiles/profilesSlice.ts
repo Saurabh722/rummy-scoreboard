@@ -1,14 +1,16 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
-import type { PlayerProfile } from '../../types';
+import type { PlayerProfile, PlayerGroup } from '../../types';
 
 interface ProfilesState {
   profiles: PlayerProfile[];
+  groups: PlayerGroup[];
 }
 
 const initialState: ProfilesState = {
   profiles: [],
+  groups: [],
 };
 
 const profilesSlice = createSlice({
@@ -46,8 +48,48 @@ const profilesSlice = createSlice({
         }
       });
     },
+
+    // ── Groups ────────────────────────────────────────────────────────────────
+    addGroup(state, action: PayloadAction<string>) {
+      const name = action.payload.trim();
+      if (!name) return;
+      state.groups.push({ id: uuidv4(), name, memberIds: [], createdAt: Date.now() });
+    },
+
+    editGroup(state, action: PayloadAction<{ id: string; name: string }>) {
+      const group = state.groups.find((g) => g.id === action.payload.id);
+      if (group) group.name = action.payload.name.trim();
+    },
+
+    deleteGroup(state, action: PayloadAction<string>) {
+      state.groups = state.groups.filter((g) => g.id !== action.payload);
+    },
+
+    addMemberToGroup(state, action: PayloadAction<{ groupId: string; profileId: string }>) {
+      const group = state.groups.find((g) => g.id === action.payload.groupId);
+      if (group && !group.memberIds.includes(action.payload.profileId)) {
+        group.memberIds.push(action.payload.profileId);
+      }
+    },
+
+    removeMemberFromGroup(state, action: PayloadAction<{ groupId: string; profileId: string }>) {
+      const group = state.groups.find((g) => g.id === action.payload.groupId);
+      if (group) {
+        group.memberIds = group.memberIds.filter((id) => id !== action.payload.profileId);
+      }
+    },
   },
 });
 
-export const { addProfile, editProfile, deleteProfile, incrementStats } = profilesSlice.actions;
+export const {
+  addProfile,
+  editProfile,
+  deleteProfile,
+  incrementStats,
+  addGroup,
+  editGroup,
+  deleteGroup,
+  addMemberToGroup,
+  removeMemberFromGroup,
+} = profilesSlice.actions;
 export default profilesSlice.reducer;
