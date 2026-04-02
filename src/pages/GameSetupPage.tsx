@@ -31,7 +31,9 @@ import {
 const STEPS = ['Players', 'Review'];
 
 // ─── Step 1: Game Type ──────────────────────────────────────────────────────
-function StepGameType({
+// Exported so TypeScript doesn't flag it as unused while the game-type step is hidden.
+// Re-use it in the STEPS array when re-enabling the step.
+export function StepGameType({
   gameType,
   setGameType,
   poolLimit,
@@ -370,11 +372,15 @@ export function GameSetupPage() {
   const dispatch = useAppDispatch();
 
   const [step, setStep] = useState(0);
-  const [gameType, setGameType] = useState<GameType>('points');
+  // gameType fixed to 'points' while game type step is hidden
+  const [gameType] = useState<GameType>('points');
+  // poolLimit and totalDeals unused until game type step is restored
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [poolLimit, setPoolLimit] = useState<PoolLimit>(101);
   const [pointsLimit, setPointsLimit] = useState(POINTS_DEFAULT_LIMIT);
   const [firstDrop, setFirstDrop] = useState(FIRST_DROP_DEFAULT);
   const [maxPoints, setMaxPoints] = useState(MAX_POINTS_DEFAULT);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [totalDeals, setTotalDeals] = useState(3);
   const [players, setPlayers] = useState<string[]>([]);
 
