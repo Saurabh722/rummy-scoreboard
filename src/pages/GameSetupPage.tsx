@@ -397,11 +397,10 @@ export function GameSetupPage() {
           id: gameId,
           type: gameType,
           playerNames: players,
-          poolLimit: gameType === 'pool' ? poolLimit : undefined,
-          pointsLimit: gameType === 'points' ? pointsLimit : undefined,
-          firstDrop: gameType === 'points' ? firstDrop : undefined,
-          maxPoints: gameType === 'points' ? maxPoints : undefined,
-          totalDeals: gameType === 'deals' ? totalDeals : undefined,
+          // poolLimit and totalDeals are unused while 'points' is the only type
+          pointsLimit,
+          firstDrop,
+          maxPoints,
         }),
       );
       navigate(`/game/${gameId}`);
